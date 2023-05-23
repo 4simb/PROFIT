@@ -49,16 +49,18 @@ while(True):
         err = upBlob.cx() - downBlob.cx();
         p = err * kp
         d = (err - errOld) * kd
-        u = p + d
-        u *= 0.05
-        if u > 6:
-            u = 6
-        elif u < -6:
-            u = -6
+        uUpDown = p + d
+        uUpDown *= 0.1
+        if uUpDown > 6:
+            uUpDown = 6
+        elif uUpDown < -6:
+            uUpDown = -6
         errOld = err
-        #if downBlob.cx() < 0.5 * img.height():
-        leftU = 13 + u - (0.5 * img.width() - downBlob.cx()) * 0.071
-        rightU = 13 - u + (0.5 * img.width() - downBlob.cx()) * 0.071
+        uDown = (downBlob.cx() - 0.5 * img.width()) * 0.142
+
+        u = 0.5 * uUpDown + 0.5 * uDown
+        leftU = 13 + u
+        rightU = 13 - u
 
         if leftU >= 40:
             left1.pulse_width_percent(40)
