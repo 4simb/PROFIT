@@ -5,22 +5,22 @@ from pyb import Timer
 from machine import Pin
 
 maximum = 40
-threshold_black = (0, 25, -14, 127, -128, 11)
+threshold_black = (0, 53)
 
-kpBias = 0.16 #0.16
+kpBias = 0.12 #0.11
 kdBias = 1.1
-kpCentral = 0.36 #0.35
-kdCentral = 30 #11
+kpCentral = 0.18 #0.29
+kdCentral = 18 #11
 
 errBias = 0
 errCentral = 0
 errBiasOld = 0
 errCentralOld = 0
 
-biasThreshold = 16 #6
-centralThreshold = 16
+biasThreshold = 10 #6
+centralThreshold = 10
 
-vel = 22
+vel = 12
 leftU = 0
 rightU = 0
 
@@ -57,7 +57,7 @@ def setMotors(p1, p2, value):
 sensor.reset()
 sensor.set_contrast(1)                     # Reset and initialize the sensor.
 sensor.set_gainceiling(16)
-sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)   # Set frame size to QVGA (320x240)
 sensor.skip_frames(time = 2000)     # Wait for settings take effect.
 clock = time.clock()                # Create a clock object to track the FPS.
@@ -73,14 +73,14 @@ while(True):
 
     maxiUp = 0
     upBlob = []
-    for yb in img.find_blobs([threshold_black], merge = True, margin = 400, roi = roiUp):
+    for yb in img.find_blobs([threshold_black], merge = True, margin = 300, roi = roiUp):
         if yb.pixels() > maxiUp:
-            maxiUp = maxiUp
+            maxiUp = yb.pixels()
             upBlob = yb
 
     maxiDown = 0
     downBlob = []
-    for yb in img.find_blobs([threshold_black], merge = True, margin = 400, roi = roiDown):
+    for yb in img.find_blobs([threshold_black], merge = True, margin = 300, roi = roiDown):
         if yb.pixels() > maxiDown:
             maxiDown = yb.pixels()
             downBlob = yb
@@ -98,7 +98,7 @@ while(True):
             else:
                 uBias = biasThreshold
 
-        uBiasSoft = uBiasSoft * 0.4 + uBias * 0.6 #0.45 0.55
+        uBiasSoft = uBiasSoft * 0.5 + uBias * 0.5
         errBiasOld = errBias
 
     if downBlob != []:
@@ -118,10 +118,10 @@ while(True):
             uCentral = centralThreshold
 
     #0.77 0.23
-    uCentralSoft = 0.5 * uCentralSoft + 0.5 * uCentral
+    uCentralSoft = 0.7 * uCentralSoft + 0.3 * uCentral
     #0.5 0.5
-    u = 0.35 * uBiasSoft + 0.65 * uCentralSoft
-    u *= 1.64 #0.55
+    u = 0.1 * uBiasSoft + 0.9 * uCentralSoft
+    u *= 1 #0.55
 
     leftU = vel + u
     rightU = vel - u
