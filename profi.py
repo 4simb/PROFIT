@@ -1,26 +1,28 @@
+#8.03 seconds/секуд/
+
 import sensor, image, time, pyb
 import math
 from image import SEARCH_EX, SEARCH_DS
 from pyb import Timer
 from machine import Pin
 
-maximum = 40
-threshold_black = (0, 53)
+maximum = 100
+threshold_black = (0, 70)
 
-kpBias = 0.12 #0.11
-kdBias = 1.1
-kpCentral = 0.18 #0.29
-kdCentral = 18 #11
+kpBias = 0.26 #0.23
+kdBias = 0.81 #1.5
+kpCentral = 0.38 #0.41 #0.38 #0.25
+kdCentral = 7 #22 #45
 
 errBias = 0
 errCentral = 0
 errBiasOld = 0
 errCentralOld = 0
 
-biasThreshold = 10 #6
+biasThreshold = 30 #6
 centralThreshold = 10
 
-vel = 12
+vel = 70 #27
 leftU = 0
 rightU = 0
 
@@ -37,8 +39,9 @@ timer2 = pyb.Timer(2, freq=1000)
 right1 = timer2.channel(3, pyb.Timer.PWM, pin = pyb.Pin("P4"))
 right2 = timer2.channel(4, pyb.Timer.PWM, pin = pyb.Pin("P5"))
 
-tim = pyb.Timer(4, freq=20)
-impeller = tim.channel(1, pyb.Timer.PWM, pin = pyb.Pin("P9"))
+tim = pyb.Timer(4, freq=50, period = 4000)
+impeller = tim.channel(3, pyb.Timer.PWM, pin = pyb.Pin("P9"))
+impeller.pulse_width(2000)
 
 def setMotors(p1, p2, value):
     if value >= maximum:
@@ -62,6 +65,9 @@ sensor.set_framesize(sensor.QQVGA)   # Set frame size to QVGA (320x240)
 sensor.skip_frames(time = 2000)     # Wait for settings take effect.
 clock = time.clock()                # Create a clock object to track the FPS.
 
+for i in range(2000, 2651):
+    impeller.pulse_width(i)
+    pyb.delay(1)
 #impeller.pulse_width_percent(100)
 
 while(True):
@@ -73,17 +79,22 @@ while(True):
 
     maxiUp = 0
     upBlob = []
-    for yb in img.find_blobs([threshold_black], merge = True, margin = 300, roi = roiUp):
+    for yb in img.find_blobs([threshold_black], merge = True, margin = 60, roi = roiUp):
         if yb.pixels() > maxiUp:
             maxiUp = yb.pixels()
             upBlob = yb
 
     maxiDown = 0
     downBlob = []
-    for yb in img.find_blobs([threshold_black], merge = True, margin = 300, roi = roiDown):
+    for yb in img.find_blobs([threshold_black], merge = True, margin = 60, roi = roiDown):
         if yb.pixels() > maxiDown:
             maxiDown = yb.pixels()
             downBlob = yb
+
+    if downBlob != []:
+        img.draw_rectangle((downBlob.x(), downBlob.y(), downBlob.w(), downBlob.h()))
+    if upBlob != []:
+        img.draw_rectangle((upBlob.x(), upBlob.y(), upBlob.w(), upBlob.h()))
 
     if downBlob != [] and upBlob != []:
         img.draw_line(upBlob.cx(), upBlob.cy(), downBlob.cx(), downBlob.cy())
@@ -98,13 +109,14 @@ while(True):
             else:
                 uBias = biasThreshold
 
+        #0.06 0.94
         uBiasSoft = uBiasSoft * 0.5 + uBias * 0.5
         errBiasOld = errBias
 
     if downBlob != []:
-        errCentral = downBlob.cx() - 0.5 * img.width()
+        errCentral = downBlob.x() - 0.5 * img.width()
     elif downBlob == [] and upBlob != []:
-        errCentral = upBlob.cx() - 0.5 * img.width()
+        errCentral = upBlob.x() - 0.5 * img.width()
 
     pCentral = errCentral * kpCentral
     dCentral = (errCentral - errCentralOld) * kdCentral
@@ -117,15 +129,21 @@ while(True):
         else:
             uCentral = centralThreshold
 
-    #0.77 0.23
-    uCentralSoft = 0.7 * uCentralSoft + 0.3 * uCentral
-    #0.5 0.5
-    u = 0.1 * uBiasSoft + 0.9 * uCentralSoft
-    u *= 1 #0.55
+    #0.35 0.65
+    uCentralSoft = 0.35 * uCentralSoft + 0.65 * uCentral
+    #0.05 0.95
+    u = 0.11 * uBiasSoft + 0.89 * uCentralSoft
+    #u *= vel/7 #6.5
 
-    leftU = vel + u
-    rightU = vel - u
+    v = vel - pow(abs(uCentral), 1.8) * 0.01 #0.085 #0.4 #0.82
+    if abs(errCentral) < 33:
+        v = maximum
+
+    u *= v/6.8 #8.3
+    leftU = v + u
+    rightU = v - u
     setMotors(left1, left2, leftU)
     setMotors(right1, right2, rightU)
 
+    #print(clock.fps())
     #pyb.delay(1)
