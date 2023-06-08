@@ -1,5 +1,3 @@
-#8.03 seconds/секуд/
-
 import sensor, image, time, pyb
 import math
 from image import SEARCH_EX, SEARCH_DS
@@ -9,10 +7,10 @@ from machine import Pin
 maximum = 100
 threshold_black = (0, 70)
 
-kpBias = 0.26 #0.23
+kpBias = 0.29 #0.23
 kdBias = 0.81 #1.5
-kpCentral = 0.38 #0.41 #0.38 #0.25
-kdCentral = 7 #22 #45
+kpCentral = 0.38 #0.36 #0.41 #0.38 #0.25
+kdCentral = 10 #22 #45
 
 errBias = 0
 errCentral = 0
@@ -22,7 +20,7 @@ errCentralOld = 0
 biasThreshold = 30 #6
 centralThreshold = 10
 
-vel = 70 #27
+vel = 90 #27
 leftU = 0
 rightU = 0
 
@@ -65,16 +63,16 @@ sensor.set_framesize(sensor.QQVGA)   # Set frame size to QVGA (320x240)
 sensor.skip_frames(time = 2000)     # Wait for settings take effect.
 clock = time.clock()                # Create a clock object to track the FPS.
 
-for i in range(2000, 2651):
+for i in range(2400, 2672):
     impeller.pulse_width(i)
-    pyb.delay(1)
+    pyb.delay(5)
 #impeller.pulse_width_percent(100)
 
 while(True):
     clock.tick()                    # Update the FPS clock.
     img = sensor.snapshot()
 
-    roiUp = (0, 0, img.width(), int(0.5 * img.height()))
+    roiUp = (0, 8, img.width(), int(0.5 * img.height()))
     roiDown = (0, int(0.5 * img.height()), img.width(), int(0.5 * img.height()))
 
     maxiUp = 0
@@ -129,17 +127,17 @@ while(True):
         else:
             uCentral = centralThreshold
 
-    #0.35 0.65
-    uCentralSoft = 0.35 * uCentralSoft + 0.65 * uCentral
+    #0.4 0.6
+    uCentralSoft = 0.4 * uCentralSoft + 0.6 * uCentral
     #0.05 0.95
     u = 0.11 * uBiasSoft + 0.89 * uCentralSoft
     #u *= vel/7 #6.5
 
-    v = vel - pow(abs(uCentral), 1.8) * 0.01 #0.085 #0.4 #0.82
-    if abs(errCentral) < 33:
+    v = vel - pow(abs(uCentral), 1.8) * 0.001 #0.085 #0.4 #0.82
+    if abs(errCentral) < 47: #33
         v = maximum
 
-    u *= v/6.8 #8.3
+    u *= v/7.82 #7.3
     leftU = v + u
     rightU = v - u
     setMotors(left1, left2, leftU)
